@@ -1,4 +1,3 @@
-from pickle import FALSE
 import tkinter
 import tkinter.filedialog
 import pygame
@@ -10,11 +9,10 @@ import sys
 import meshio
 import matplotlib.pyplot as plt
 from matplotlib.cm import get_cmap
-from matplotlib.widgets import RectangleSelector
 from solidspy.solids_GUI import solids_GUI
-from collections import deque
 import tkinter
 import time
+from pyqtree import Index
 
 import matplotlib
 matplotlib.use("Agg")
@@ -126,9 +124,20 @@ class UIPanel:
     self.showPatches = tkinter.BooleanVar()
     self.showPatches.set(True)
 
+    self.showBoundary = tkinter.BooleanVar()
+    self.showBoundary.set(True)
+
+    self.showBoundaryPoints = tkinter.BooleanVar()
+    self.showBoundaryPoints.set(True)
+
     tkinter.Label(self.root, text="Layers").grid(row=0, column=0, sticky=tkinter.W, columnspan=2)
     tkinter.Checkbutton(self.root, text="Original Image", variable = self.showOriginal, onvalue = True, offvalue = False).grid(row=1, column=0, sticky=tkinter.W, columnspan=2)
-    tkinter.Checkbutton(self.root, text="Patches Plot", variable = self.showPatches, onvalue = True, offvalue = False).grid(row=2, column=0, sticky=tkinter.W, columnspan=2)
+    tkinter.Checkbutton(self.root, text="Material Patches Plot", variable = self.showPatches, onvalue = True, offvalue = False).grid(row=2, column=0, sticky=tkinter.W, columnspan=2)
+    tkinter.Checkbutton(self.root, text="Boundary Plot", variable = self.showBoundary, onvalue = True, offvalue = False).grid(row=3, column=0, sticky=tkinter.W, columnspan=2)
+    tkinter.Checkbutton(self.root, text="Boundary Points", variable = self.showBoundaryPoints, onvalue = True, offvalue = False).grid(row=4, column=0, sticky=tkinter.W, columnspan=2)
+    self.row_start_index = 5
+
+    self.event = "None"
   
   def __del__(self):
     self.root.destroy()
@@ -144,24 +153,72 @@ class UIPanel:
       (r, g, b) = rgb
       return '#%02x%02x%02x' % (int(r*255), int(g*255), int(b*255))
     
-    row_start_index = 3
-    tkinter.Label(self.root, text="Material Patches").grid(row=row_start_index, column=0, sticky=tkinter.W, columnspan=2)
-    row_start_index += 1
+    tkinter.Label(self.root, text="Material Patches").grid(row=self.row_start_index, column=0, sticky=tkinter.W, columnspan=2)
+    self.row_start_index += 1
     for p in self.patches_legend:
       var1 = tkinter.DoubleVar()
       var1.set(1.0)
       var2 = tkinter.DoubleVar()
       var2.set(1.0)
       self.patches_material.append([var1, var2])
-      tkinter.Label(self.root, text="■", fg=_from_rgb(p[0])).grid(row=row_start_index, column=0, sticky=tkinter.W)
-      tkinter.Label(self.root, text=p[1]).grid(row=row_start_index, column=1, sticky=tkinter.W)
-      row_start_index += 1
-      tkinter.Label(self.root, text="Young's Module").grid(row=row_start_index, column=0, sticky=tkinter.W)
-      tkinter.Entry(self.root, textvariable=var1).grid(row=row_start_index, column=1, sticky=tkinter.W)
-      row_start_index += 1
-      tkinter.Label(self.root, text="Poisson’s ratio").grid(row=row_start_index, column=0, sticky=tkinter.W)
-      tkinter.Entry(self.root, textvariable=var2).grid(row=row_start_index, column=1, sticky=tkinter.W)
-      row_start_index += 1
+      tkinter.Label(self.root, text="■", fg=_from_rgb(p[0])).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+      tkinter.Label(self.root, text=p[1]).grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+      self.row_start_index += 1
+      tkinter.Label(self.root, text="Young's Module").grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+      tkinter.Entry(self.root, textvariable=var1).grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+      self.row_start_index += 1
+      tkinter.Label(self.root, text="Poisson's ratio").grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+      tkinter.Entry(self.root, textvariable=var2).grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+      self.row_start_index += 1
+  
+  def setEvent(self, e):
+    self.event = e
+  
+  def setPointsLegend(self):
+    def _from_rgb(rgb):
+      (r, g, b) = rgb
+      return '#%02x%02x%02x' % (int(r*255), int(g*255), int(b*255))
+
+    tkinter.Label(self.root, text="Boundary Conditions").grid(row=self.row_start_index, column=0, sticky=tkinter.W, columnspan=2)
+    self.row_start_index += 1
+    tkinter.Label(self.root, text="•", fg=_from_rgb((1, 0, 0))).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.Label(self.root, text="Selected boundary points").grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+    self.row_start_index += 1
+    tkinter.Label(self.root, text="⬤", fg=_from_rgb((0, 0.5, 0.5))).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.Label(self.root, text="Free boundary points").grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+    self.row_start_index += 1
+    tkinter.Label(self.root, text="⬤", fg=_from_rgb((0, 1, 0.5))).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.Label(self.root, text="boundary points with x constraints").grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+    self.row_start_index += 1
+    tkinter.Label(self.root, text="⬤", fg=_from_rgb((0, 0.5, 1))).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.Label(self.root, text="boundary points with y constraints").grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+    self.row_start_index += 1
+    tkinter.Label(self.root, text="⬤", fg=_from_rgb((0, 1, 1))).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.Label(self.root, text="boundary points with x and y constraints").grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+    self.row_start_index += 1
+    tkinter.Button(self.root, text="Apply x constraints on select", command= lambda: self.setEvent("apply-x")).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    self.row_start_index += 1
+    tkinter.Button(self.root, text="Apply y constraints on select", command= lambda: self.setEvent("apply-y")).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    self.row_start_index += 1
+    tkinter.Button(self.root, text="Clear constraints on select", command= lambda: self.setEvent("clear-apply")).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    self.row_start_index += 1
+  
+  def setForceOptions(self):
+    self.forceX = tkinter.DoubleVar()
+    self.forceX.set(1.0)
+    self.forceY = tkinter.DoubleVar()
+    self.forceY.set(1.0)
+    
+    tkinter.Label(self.root, text="Force on x direction").grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.Entry(self.root, textvariable=self.forceX).grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+    self.row_start_index += 1
+    tkinter.Label(self.root, text="Force on y direction").grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.Entry(self.root, textvariable=self.forceY).grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+    self.row_start_index += 1
+    tkinter.Button(self.root, text="Apple force on select", command= lambda: self.setEvent("apply-force")).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    self.row_start_index += 1
+    tkinter.Button(self.root, text="Clear force on select", command= lambda: self.setEvent("clear-force")).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    self.row_start_index += 1
 
 
 class MeshGenerator:
@@ -221,6 +278,8 @@ class MeshGenerator:
     self.loads_list = []
     self.mater_list = []
 
+    self.boundary_points = []
+
     cmap = get_cmap("tab20")
     self.colors = cmap.colors
 
@@ -230,6 +289,12 @@ class MeshGenerator:
     
     print("[Mesh Analyzer] writing and plotting elements")
     self.plotPatches()
+
+    print("[Mesh Analyzer] writing and plotting boundaries")
+    self.plotBoundaryPoints()
+
+    print("[Mesh Analyzer] building Qdtree")
+    self.buildQdtree()
     
   
   def plotPatches(self):
@@ -284,6 +349,112 @@ class MeshGenerator:
     renderer = canvas.get_renderer()
     self.patches_plot = pygame.image.fromstring(renderer.tostring_rgb(), (self.width, self.height), "RGB")
     self.patches_plot = pygame.transform.flip(self.patches_plot, False, True)
+  
+  def plotBoundaryPoints(self):
+    fig = pylab.figure(figsize=[self.width / 40, self.height / 40], dpi=40)
+    ax = fig.gca()
+
+    index = 0
+    x = []
+    y = []
+    clr = []
+    for cell in self.cells:
+        if cell.type == "line":
+            for pt in cell.data:
+              # [index, (x, y), x-constraint, y-constraint, x-force, y-force]
+              self.boundary_points.append([pt[0], copy.deepcopy(self.points[pt[0]][0:2].tolist()), 0, 0, 0, 0])
+              self.boundary_points.append([pt[1], copy.deepcopy(self.points[pt[1]][0:2].tolist()), 0, 0, 0, 0])
+              x.append(self.points[pt[0]][0:2].tolist()[0])
+              y.append(self.points[pt[0]][0:2].tolist()[1])
+              x.append(self.points[pt[1]][0:2].tolist()[0])
+              y.append(self.points[pt[1]][0:2].tolist()[1])
+              clr.append((0, 0.9, 0.1))
+              clr.append((0, 0.9, 0.1))
+            index += 1
+    plt.scatter(x, y, color = clr)
+    ax.axis(xmin=0, xmax=self.width, ymin=0, ymax=self.height)
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+
+    canvas = agg.FigureCanvasAgg(fig)
+    canvas.draw()
+    renderer = canvas.get_renderer()
+    self.boundary_plot = pygame.image.fromstring(renderer.tostring_rgb(), (self.width, self.height), "RGB")
+    self.boundary_plot = pygame.transform.flip(self.boundary_plot, False, True)
+
+  def buildQdtree(self):
+    self.tree = Index(bbox=(0, 0, self.width, self.height))
+    for p in self.boundary_points:
+      self.tree.insert(p, (p[1][0], p[1][1], p[1][0], p[1][1]))
+  
+  def getSelection(self, bbox):
+    return self.tree.intersect(bbox)
+
+class SelectionBox:
+  def __init__(self):
+    self.isMouseDown = False
+    self.mouseDownPos = None
+    self.currentMousePos = None
+  
+  def onMouseDown(self, pos):
+    self.mouseDownPos = pos
+    self.currentMousePos = pos
+    self.isMouseDown = True
+
+  def onMouseUp(self, pos):
+    self.isMouseDown = False
+  
+  def onMouseMove(self, pos):
+    if self.isMouseDown:
+      self.currentMousePos = pos
+  
+  def getSelectionBBox(self, canvas, size):
+    x1 = (self.mouseDownPos[0] - canvas.origin[0]) / canvas.zoom
+    y1 = size[1] - (self.mouseDownPos[1] - canvas.origin[1]) / canvas.zoom
+    x2 = (self.currentMousePos[0] - canvas.origin[0]) / canvas.zoom
+    y2 = size[1] - (self.currentMousePos[1] - canvas.origin[1]) / canvas.zoom
+    return (min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2))
+
+def drawBoundaryPoints(generator, canvas, screen):
+  def getColor(x_constraint, y_constraint):
+    if x_constraint < 0 and y_constraint < 0:
+      return (0, 255, 255)
+    if x_constraint < 0 and y_constraint == 0:
+      return (0, 255, 128)
+    if x_constraint == 0 and y_constraint < 0:
+      return (0, 128, 255)
+    return (0, 128, 128)
+  
+  def transformPose(x, y):
+    return (x * canvas.zoom + canvas.origin[0], (size[1] - y) * canvas.zoom + canvas.origin[1])
+
+  for b in generator.boundary_points:
+    pygame.draw.circle(screen, getColor(b[2], b[3]), transformPose(b[1][0], b[1][1]), 5, 0)
+
+    if b[4] != 0 or b[5] != 0:
+      pygame.draw.line(screen, (251, 206, 177), transformPose(b[1][0], b[1][1]), transformPose(b[1][0] + b[4] * canvas.zoom, b[1][1] + b[5] * canvas.zoom), 4)
+
+def drawSelectedPoints(generator, canvas, screen, selected):
+  for b in selected:
+    pygame.draw.circle(screen, (255, 0, 0), (b[1][0] * canvas.zoom + canvas.origin[0], (size[1] - b[1][1]) * canvas.zoom + canvas.origin[1]), 3, 0)
+
+def validRect(rect):
+  new_rect = list(rect)
+  if new_rect[2] < 0:
+    new_rect[0] = new_rect[0] + new_rect[2]
+    new_rect[2] = -new_rect[2]
+  if new_rect[3] < 0:
+    new_rect[1] = new_rect[1] + new_rect[3]
+    new_rect[3] = -new_rect[3]
+  return tuple(new_rect)
+
+selected_points = []
 
 if __name__ == '__main__':
   pygame.init()
@@ -304,7 +475,11 @@ if __name__ == '__main__':
 
   gui = UIPanel()
   gui.setPatchesLegend(generator.patches_plot_legend)
+  gui.setPointsLegend()
+  gui.setForceOptions()
     
+  selection = SelectionBox()
+
   # run window
   running = True
   while running:
@@ -316,11 +491,16 @@ if __name__ == '__main__':
         if event.type == pygame.MOUSEBUTTONDOWN:
           if event.button == 3:
             canvas.onMouseDown(event.pos)
+          elif event.button == 1:
+            selection.onMouseDown(event.pos)
         if event.type == pygame.MOUSEBUTTONUP:
           if event.button == 3:
             canvas.onMouseUp(event.pos)
+          elif event.button == 1:
+            selection.onMouseUp(event.pos)
         if event.type == pygame.MOUSEMOTION:
           canvas.onMouseMove(pygame.mouse.get_pos())
+          selection.onMouseMove(pygame.mouse.get_pos())
         if event.type == pygame.MOUSEWHEEL:
           canvas.onMouseWheel(event.y)
 
@@ -331,7 +511,44 @@ if __name__ == '__main__':
       canvas.getSurface().blit(image, (0, 0))
     if gui.showPatches.get():
       canvas.getSurface().blit(generator.patches_plot, (0, 0))
+    if gui.showBoundary.get():
+      canvas.getSurface().blit(generator.boundary_plot, (0, 0))
     canvas.end(screen)
+
+    # Draw boundary points
+    if gui.showBoundaryPoints.get():
+      drawBoundaryPoints(generator, canvas, screen)
+      drawSelectedPoints(generator, canvas, screen, selected_points)
+    
+    # Draw selection box
+    if selection.isMouseDown: 
+      pygame.draw.rect(screen, (255, 0, 0), validRect((selection.mouseDownPos[0], 
+                                                       selection.mouseDownPos[1], 
+                                                       selection.currentMousePos[0] - selection.mouseDownPos[0], 
+                                                       selection.currentMousePos[1] - selection.mouseDownPos[1])), 2)
+      selected_points = generator.getSelection(selection.getSelectionBBox(canvas, size))
+
+    # Read UI events
+    if gui.event == "apply-x":
+      for p in selected_points:
+        p[2] = -1
+    elif gui.event == "apply-y":
+      for p in selected_points:
+        p[3] = -1
+    elif gui.event == "clear-apply":
+      for p in selected_points:
+        p[2] = 0
+        p[3] = 0
+    elif gui.event == "apply-force":
+      for p in selected_points:
+        p[4] = gui.forceX.get()
+        p[5] = gui.forceY.get()
+    elif gui.event == "clear-force":
+      for p in selected_points:
+        p[4] = 0
+        p[5] = 0
+    
+    gui.event = ""
 
     pygame.display.update()
 
