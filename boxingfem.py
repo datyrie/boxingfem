@@ -11,8 +11,10 @@ import matplotlib.pyplot as plt
 from matplotlib.cm import get_cmap
 from solidspy.solids_GUI import solids_GUI
 import tkinter
+import tkinter.ttk
 import time
 from pyqtree import Index
+import subprocess
 
 import matplotlib
 matplotlib.use("Agg")
@@ -115,7 +117,7 @@ class UIPanel:
   def __init__(self):
     self.root = tkinter.Tk()
     self.root.title("boxingfem Config")
-    self.root.geometry('260x600')
+    self.root.geometry('400x600')
     self.root.protocol("WM_DELETE_WINDOW", quit_callback)
 
     self.showOriginal = tkinter.BooleanVar()
@@ -130,11 +132,11 @@ class UIPanel:
     self.showBoundaryPoints = tkinter.BooleanVar()
     self.showBoundaryPoints.set(True)
 
-    tkinter.Label(self.root, text="Layers").grid(row=0, column=0, sticky=tkinter.W, columnspan=2)
-    tkinter.Checkbutton(self.root, text="Original Image", variable = self.showOriginal, onvalue = True, offvalue = False).grid(row=1, column=0, sticky=tkinter.W, columnspan=2)
-    tkinter.Checkbutton(self.root, text="Material Patches Plot", variable = self.showPatches, onvalue = True, offvalue = False).grid(row=2, column=0, sticky=tkinter.W, columnspan=2)
-    tkinter.Checkbutton(self.root, text="Boundary Plot", variable = self.showBoundary, onvalue = True, offvalue = False).grid(row=3, column=0, sticky=tkinter.W, columnspan=2)
-    tkinter.Checkbutton(self.root, text="Boundary Points", variable = self.showBoundaryPoints, onvalue = True, offvalue = False).grid(row=4, column=0, sticky=tkinter.W, columnspan=2)
+    tkinter.ttk.Label(self.root, text="Layers").grid(row=0, column=0, sticky=tkinter.W, columnspan=2)
+    tkinter.ttk.Checkbutton(self.root, text="Original Image", variable = self.showOriginal, onvalue = True, offvalue = False).grid(row=1, column=0, sticky=tkinter.W, columnspan=2)
+    tkinter.ttk.Checkbutton(self.root, text="Material Patches Plot", variable = self.showPatches, onvalue = True, offvalue = False).grid(row=2, column=0, sticky=tkinter.W, columnspan=2)
+    tkinter.ttk.Checkbutton(self.root, text="Boundary Plot", variable = self.showBoundary, onvalue = True, offvalue = False).grid(row=3, column=0, sticky=tkinter.W, columnspan=2)
+    tkinter.ttk.Checkbutton(self.root, text="Boundary Points", variable = self.showBoundaryPoints, onvalue = True, offvalue = False).grid(row=4, column=0, sticky=tkinter.W, columnspan=2)
     self.row_start_index = 5
 
     self.event = "None"
@@ -153,7 +155,7 @@ class UIPanel:
       (r, g, b) = rgb
       return '#%02x%02x%02x' % (int(r*255), int(g*255), int(b*255))
     
-    tkinter.Label(self.root, text="Material Patches").grid(row=self.row_start_index, column=0, sticky=tkinter.W, columnspan=2)
+    tkinter.ttk.Label(self.root, text="Material Patches").grid(row=self.row_start_index, column=0, sticky=tkinter.W, columnspan=2)
     self.row_start_index += 1
     for p in self.patches_legend:
       var1 = tkinter.DoubleVar()
@@ -161,14 +163,14 @@ class UIPanel:
       var2 = tkinter.DoubleVar()
       var2.set(1.0)
       self.patches_material.append([var1, var2])
-      tkinter.Label(self.root, text="■", fg=_from_rgb(p[0])).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+      tkinter.ttk.Label(self.root, text="■", foreground=_from_rgb(p[0])).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
       tkinter.Label(self.root, text=p[1]).grid(row=self.row_start_index, column=1, sticky=tkinter.W)
       self.row_start_index += 1
-      tkinter.Label(self.root, text="Young's Module").grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+      tkinter.ttk.Label(self.root, text="Young's Module").grid(row=self.row_start_index, column=0, sticky=tkinter.W)
       tkinter.Entry(self.root, textvariable=var1).grid(row=self.row_start_index, column=1, sticky=tkinter.W)
       self.row_start_index += 1
-      tkinter.Label(self.root, text="Poisson's ratio").grid(row=self.row_start_index, column=0, sticky=tkinter.W)
-      tkinter.Entry(self.root, textvariable=var2).grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+      tkinter.ttk.Label(self.root, text="Poisson's ratio (-1 to 0.5)").grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+      tkinter.ttk.Entry(self.root, textvariable=var2).grid(row=self.row_start_index, column=1, sticky=tkinter.W)
       self.row_start_index += 1
   
   def setEvent(self, e):
@@ -179,28 +181,28 @@ class UIPanel:
       (r, g, b) = rgb
       return '#%02x%02x%02x' % (int(r*255), int(g*255), int(b*255))
 
-    tkinter.Label(self.root, text="Boundary Conditions").grid(row=self.row_start_index, column=0, sticky=tkinter.W, columnspan=2)
+    tkinter.ttk.Label(self.root, text="Boundary Conditions").grid(row=self.row_start_index, column=0, sticky=tkinter.W, columnspan=2)
     self.row_start_index += 1
-    tkinter.Label(self.root, text="•", fg=_from_rgb((1, 0, 0))).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
-    tkinter.Label(self.root, text="Selected boundary points").grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+    tkinter.ttk.Label(self.root, text="•", foreground=_from_rgb((1, 0, 0))).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.ttk.Label(self.root, text="Selected boundary points").grid(row=self.row_start_index, column=1, sticky=tkinter.W)
     self.row_start_index += 1
-    tkinter.Label(self.root, text="⬤", fg=_from_rgb((0, 0.5, 0.5))).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
-    tkinter.Label(self.root, text="Free boundary points").grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+    tkinter.ttk.Label(self.root, text="⬤", foreground=_from_rgb((0, 0.5, 0.5))).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.ttk.Label(self.root, text="Free boundary points").grid(row=self.row_start_index, column=1, sticky=tkinter.W)
     self.row_start_index += 1
-    tkinter.Label(self.root, text="⬤", fg=_from_rgb((0, 1, 0.5))).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
-    tkinter.Label(self.root, text="boundary points with x constraints").grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+    tkinter.ttk.Label(self.root, text="⬤", foreground=_from_rgb((0, 1, 0.5))).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.ttk.Label(self.root, text="boundary points with x constraints").grid(row=self.row_start_index, column=1, sticky=tkinter.W)
     self.row_start_index += 1
-    tkinter.Label(self.root, text="⬤", fg=_from_rgb((0, 0.5, 1))).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
-    tkinter.Label(self.root, text="boundary points with y constraints").grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+    tkinter.ttk.Label(self.root, text="⬤", foreground=_from_rgb((0, 0.5, 1))).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.ttk.Label(self.root, text="boundary points with y constraints").grid(row=self.row_start_index, column=1, sticky=tkinter.W)
     self.row_start_index += 1
-    tkinter.Label(self.root, text="⬤", fg=_from_rgb((0, 1, 1))).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
-    tkinter.Label(self.root, text="boundary points with x and y constraints").grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+    tkinter.ttk.Label(self.root, text="⬤", foreground=_from_rgb((0, 1, 1))).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.ttk.Label(self.root, text="boundary points with x and y constraints").grid(row=self.row_start_index, column=1, sticky=tkinter.W)
     self.row_start_index += 1
-    tkinter.Button(self.root, text="Apply x constraints on select", command= lambda: self.setEvent("apply-x")).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.ttk.Button(self.root, text="Apply x constraints on select", command= lambda: self.setEvent("apply-x")).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
     self.row_start_index += 1
-    tkinter.Button(self.root, text="Apply y constraints on select", command= lambda: self.setEvent("apply-y")).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.ttk.Button(self.root, text="Apply y constraints on select", command= lambda: self.setEvent("apply-y")).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
     self.row_start_index += 1
-    tkinter.Button(self.root, text="Clear constraints on select", command= lambda: self.setEvent("clear-apply")).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.ttk.Button(self.root, text="Clear constraints on select", command= lambda: self.setEvent("clear-apply")).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
     self.row_start_index += 1
   
   def setForceOptions(self):
@@ -209,15 +211,21 @@ class UIPanel:
     self.forceY = tkinter.DoubleVar()
     self.forceY.set(1.0)
     
-    tkinter.Label(self.root, text="Force on x direction").grid(row=self.row_start_index, column=0, sticky=tkinter.W)
-    tkinter.Entry(self.root, textvariable=self.forceX).grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+    tkinter.ttk.Label(self.root, text="Force on x direction").grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.ttk.Entry(self.root, textvariable=self.forceX).grid(row=self.row_start_index, column=1, sticky=tkinter.W)
     self.row_start_index += 1
-    tkinter.Label(self.root, text="Force on y direction").grid(row=self.row_start_index, column=0, sticky=tkinter.W)
-    tkinter.Entry(self.root, textvariable=self.forceY).grid(row=self.row_start_index, column=1, sticky=tkinter.W)
+    tkinter.ttk.Label(self.root, text="Force on y direction").grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.ttk.Entry(self.root, textvariable=self.forceY).grid(row=self.row_start_index, column=1, sticky=tkinter.W)
     self.row_start_index += 1
-    tkinter.Button(self.root, text="Apple force on select", command= lambda: self.setEvent("apply-force")).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.ttk.Button(self.root, text="Apple force on select", command= lambda: self.setEvent("apply-force")).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
     self.row_start_index += 1
-    tkinter.Button(self.root, text="Clear force on select", command= lambda: self.setEvent("clear-force")).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    tkinter.ttk.Button(self.root, text="Clear force on select", command= lambda: self.setEvent("clear-force")).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
+    self.row_start_index += 1
+  
+  def setCalculation(self):
+    boldStyle = tkinter.ttk.Style()
+    boldStyle.configure("Bold.TButton", font = ('Sans','10','bold'))
+    tkinter.ttk.Button(self.root, text = "Calculate", style = "Bold.TButton", command= lambda: self.setEvent("calculate")).grid(row=self.row_start_index, column=0, sticky=tkinter.W)
     self.row_start_index += 1
 
 
@@ -260,13 +268,13 @@ class MeshGenerator:
     gmsh.model.mesh.generate(2)
 
     print("[Mesh Generator] writing mesh")
-    gmsh.write("mesh.msh")
+    gmsh.write("data/mesh.msh")
     gmsh.finalize()
     time.sleep(0.1)
 
     print("[Mesh Analyzer] reading mesh")
 
-    mesh = meshio.read("mesh.msh")
+    mesh = meshio.read("data/mesh.msh")
 
     self.points = mesh.points
     self.cells = mesh.cells
@@ -358,12 +366,17 @@ class MeshGenerator:
     x = []
     y = []
     clr = []
+    point_set = set()
     for cell in self.cells:
         if cell.type == "line":
             for pt in cell.data:
               # [index, (x, y), x-constraint, y-constraint, x-force, y-force]
-              self.boundary_points.append([pt[0], copy.deepcopy(self.points[pt[0]][0:2].tolist()), 0, 0, 0, 0])
-              self.boundary_points.append([pt[1], copy.deepcopy(self.points[pt[1]][0:2].tolist()), 0, 0, 0, 0])
+              if pt[0] not in point_set:
+                point_set.add(pt[0])
+                self.boundary_points.append([pt[0], copy.deepcopy(self.points[pt[0]][0:2].tolist()), 0, 0, 0, 0])
+              if pt[1] not in point_set:
+                point_set.add(pt[1])
+                self.boundary_points.append([pt[1], copy.deepcopy(self.points[pt[1]][0:2].tolist()), 0, 0, 0, 0])
               x.append(self.points[pt[0]][0:2].tolist()[0])
               y.append(self.points[pt[0]][0:2].tolist()[1])
               x.append(self.points[pt[1]][0:2].tolist()[0])
@@ -477,6 +490,7 @@ if __name__ == '__main__':
   gui.setPatchesLegend(generator.patches_plot_legend)
   gui.setPointsLegend()
   gui.setForceOptions()
+  gui.setCalculation()
     
   selection = SelectionBox()
 
@@ -547,6 +561,25 @@ if __name__ == '__main__':
       for p in selected_points:
         p[4] = 0
         p[5] = 0
+    elif gui.event == "calculate":
+      print("Writting files")
+      for p in generator.boundary_points:
+        generator.nodes_list[p[0]][3] = p[2]
+        generator.nodes_list[p[0]][4] = p[3]
+        if p[4] != 0 or p[5] != 0:
+          generator.loads_list.append([p[0], p[4], p[5]])
+      for p in gui.patches_material:
+        generator.mater_list.append([p[0].get(), p[1].get()])
+      
+      # Create files
+      np.savetxt("data/eles.txt", generator.eles_list, fmt="%d")
+      np.savetxt("data/nodes.txt", generator.nodes_list, fmt=("%d", "%.4f", "%.4f", "%d", "%d"))
+      np.savetxt("data/loads.txt", generator.loads_list, fmt=("%d", "%.6f", "%.6f"))
+      np.savetxt("data/mater.txt", generator.mater_list, fmt="%.6f")
+
+      print("Done writting!")
+      time.sleep(0.1)
+      subprocess.call(['python','run_solidspy.py'])
     
     gui.event = ""
 
