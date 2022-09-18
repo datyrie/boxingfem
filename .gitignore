@@ -1,5 +1,2 @@
-data/eles.txt
-data/loads.txt
-data/mater.txt
-data/mesh.msh
-data/nodes.txt
+data/*
+*.pyc
